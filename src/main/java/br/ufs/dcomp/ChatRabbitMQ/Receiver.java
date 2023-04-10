@@ -5,6 +5,10 @@ import com.rabbitmq.client.*;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeoutException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 public class Receiver extends Thread {
     private Connection connection;
@@ -30,19 +34,21 @@ public class Receiver extends Thread {
 
                 MensagemProto.Mensagem recMessage = MensagemProto.Mensagem.parseFrom(body);
 
-                String emissor = recMessage.getEmissor();
-                String data = recMessage.getData();
-                String hora = recMessage.getHora();
-                String grupo = recMessage.getGrupo();
-                MensagemProto.Conteudo recConteudo = recMessage.getConteudo();
+                String sender = recMessage.getEmissor();
+                String date = recMessage.getData();
+                String hour = recMessage.getHora();
+                String group = recMessage.getGrupo();
+                MensagemProto.Conteudo recContent = recMessage.getConteudo();
 
-                String tipo = recConteudo.getTipo();
-                String corpo = recConteudo.getCorpo().toStringUtf8();
-                String nome = recConteudo.getNome();
+                String type = recContent.getTipo();
+                byte[] content = recContent.getCorpo().toByteArray();
+                String filename = recContent.getNome();
 
-                grupo = (grupo.length() > 0) ? ("#" + grupo) : grupo;
-
-                System.out.printf("\n(%s às %s) %s%s diz: %s%n", data, hora, emissor, grupo, corpo);
+                group = (group.length() > 0) ? ("#" + group) : group;
+                
+                if(type == "text/plain") {
+                    System.out.printf("\n(%s às %s) %s%s diz: %s%n", date, hour, sender, group, content);
+                }
             }
         };
         //(queue-name, autoAck, consumer);
@@ -52,6 +58,7 @@ public class Receiver extends Thread {
     @Override
     public void run() {
         Channel channel;
+        Receiver fileReceiver;
         try {
             channel = this.getConnection().createChannel();
         } catch (IOException e) {
@@ -63,6 +70,8 @@ public class Receiver extends Thread {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+            fileReceiver = new FilesReceiver(this.getConnection(),this.getQueueName());
+            fileReceiver.start();
         }
     }
 }

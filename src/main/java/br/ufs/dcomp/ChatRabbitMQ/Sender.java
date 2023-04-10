@@ -106,7 +106,6 @@ public class Sender extends Thread {
                 break;
             case "upload":
                 filepath = text.split(" ")[1];
-                System.out.println(command + " " + filepath);
                 try {
                     Path source = Paths.get(filepath);
                     Sender fileSender = new FileSender(this.connection, this.queueName, source);
@@ -173,20 +172,12 @@ public class Sender extends Thread {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-
-                    System.out.print(this.getPreText());
-                    scanner = new Scanner(System.in);
-                    text = scanner.nextLine();
                     break;
 
                 case '#':
                     this.setPreText(text + ">> ");
                     this.setGroupName(text.substring(1));
                     this.setSendTo("");
-
-                    scanner = new Scanner(System.in);
-                    System.out.print(this.getPreText());
-                    text = scanner.nextLine();
                     break;
 
                 case '!':
@@ -197,12 +188,12 @@ public class Sender extends Thread {
                     }
                     break;
                 default:
+                    try {
+                        this.send(text.getBytes(), "", "text/plain");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                     break;
-            }
-            try {
-                this.send(text.getBytes(), "", "text/plain");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
         }
     }

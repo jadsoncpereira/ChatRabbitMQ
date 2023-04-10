@@ -62,17 +62,16 @@ public class Chat extends Thread {
             this.setQueueName(queueName);
             //(queue-name, durable, exclusive, auto-delete, params);
             this.getChannel().queueDeclare(this.getQueueName(),false,false,false,null);
+            
+            Sender sender = new Sender(this.getConnection(), this.getQueueName());
+            sender.start();
+    
+            Receiver receiver = new Receiver(this.getConnection(), this.getQueueName());
+            receiver.start();
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        Sender sender = new Sender(this.getConnection(), this.getQueueName());
-        Receiver receiver = new Receiver(this.getConnection(), this.getQueueName());
-        FilesReceiver filesReceiver = new FilesReceiver(this.getConnection(), this.getQueueName());
-
-        sender.start();
-        receiver.start();
-        filesReceiver.start();
     }
 
     public static void main(String[] arg) throws Exception {

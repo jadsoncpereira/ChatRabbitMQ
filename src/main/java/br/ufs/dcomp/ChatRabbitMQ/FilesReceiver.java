@@ -35,13 +35,32 @@ public class FilesReceiver extends Receiver{
 
                 group = (group.length() > 0) ? ("#" + group) : group;
 
-                Path source = Paths.get("~/chat/downloads" + filename);
-                Files.write(source, content, StandardOpenOption.CREATE_NEW);
-
-                System.out.printf("\n(%s às %s) Arquivo \"%s\" recebido de @%s%s%n !\n", date, hour, filename, sender, group);
+                if(type != "text/plain") {
+                    Path source = Paths.get("/home/ubuntu/chat/downloads" + filename);
+                    Files.write(source, content, StandardOpenOption.CREATE_NEW);
+    
+                    System.out.printf("\n(%s às %s) Arquivo \"%s\" recebido de @%s%s%n !\n", date, hour, filename, sender, group);
+                }
             }
         };
         //(queue-name, autoAck, consumer);
         channel.basicConsume(this.getQueueName(), true, consumer);
+    }
+    
+    @Override
+    
+    public void run() {
+        Channel channel;
+        try {
+            channel = this.getConnection().createChannel();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            this.checkQueue(channel);
+            channel.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
