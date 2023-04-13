@@ -45,20 +45,14 @@ public class Receiver extends Thread {
                 String filename = recContent.getNome();
 
                 group = (group.length() > 0) ? ("#" + group) : group;
-
-                System.out.print("> ");
-                System.out.print(type);
-                System.out.print(" -> ");
-                System.out.println(content.length);
-
+                
                 if(type.equals("text/plain")) {
                     String text = new String(content);
                     System.out.printf("\n(%s às %s) %s%s diz: %s%n", date, hour, sender, group, text);
                 }
                 else {
-//                    Path source = Paths.get("/home/ubuntu/chat/downloads/" + filename);
-                    System.out.println("!!!!!!!!!!!!!!!");
-                    Path source = Paths.get("C:\\downloads\\" + filename);
+                    Path source = Paths.get("/home/ubuntu/chat/downloads/" + filename);
+                    //Path source = Paths.get("C:\\downloads\\" + filename);
                     Files.write(source, content, StandardOpenOption.CREATE_NEW);
 
                     System.out.printf("\n(%s às %s) Arquivo \"%s\" recebido de @%s%s%n !\n", date, hour, filename, sender, group);

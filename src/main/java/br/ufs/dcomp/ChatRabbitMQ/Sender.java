@@ -9,6 +9,8 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Sender extends Thread {
     private Connection connection;
@@ -106,6 +108,8 @@ public class Sender extends Thread {
                 try {
                     Path source = Paths.get(filepath);
                     Sender fileSender = new FileSender(this.connection, this.queueName, source);
+                    fileSender.setSendTo(this.getSendTo());
+                    fileSender.setGroupName(this.getGroupName());
                     fileSender.start();
 //                    this.send(data, String.valueOf(source.getFileName()), type);
                 }
@@ -120,29 +124,36 @@ public class Sender extends Thread {
     }
 
     public void send(byte[] content, String filename, AMQP.BasicProperties properties) throws Exception {
-        MensagemProto.Conteudo.Builder bContent = MensagemProto.Conteudo.newBuilder();
-        bContent.setTipo(properties.getContentType());
-        bContent.setCorpo(ByteString.copyFrom(content));
-        bContent.setNome(filename);
-
-        DateTimeFormatter dtf_data = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        DateTimeFormatter dtf_hora = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-        LocalDateTime now = LocalDateTime.now();
-
-        MensagemProto.Mensagem.Builder bMessage = MensagemProto.Mensagem.newBuilder();
-        bMessage.setEmissor(this.getQueueName());
-        bMessage.setData(dtf_data.format(now));
-        bMessage.setHora(dtf_hora.format(now));
-        bMessage.setGrupo(this.getGroupName());
-        bMessage.setConteudo(bContent);
-
-        System.out.println(content.length);
-        this.getChannel().basicPublish(
-                this.getGroupName() // exchange
-                , this.getSendTo() // routingKey
-                , properties // props
-                , bMessage.build().toByteArray()); // message-body
+        ExecutorService executorService = Executors.newFixedThreadPool(5);
+            
+        executorService.execute(() -> {
+            try {
+                MensagemProto.Conteudo.Builder bContent = MensagemProto.Conteudo.newBuilder();
+                bContent.setTipo(properties.getContentType());
+                bContent.setCorpo(ByteString.copyFrom(content));
+                bContent.setNome(filename);
+        
+                DateTimeFormatter dtf_data = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+                DateTimeFormatter dtf_hora = DateTimeFormatter.ofPattern("HH:mm:ss");
+        
+                LocalDateTime now = LocalDateTime.now();
+        
+                MensagemProto.Mensagem.Builder bMessage = MensagemProto.Mensagem.newBuilder();
+                bMessage.setEmissor(this.getQueueName());
+                bMessage.setData(dtf_data.format(now));
+                bMessage.setHora(dtf_hora.format(now));
+                bMessage.setGrupo(this.getGroupName());
+                bMessage.setConteudo(bContent);
+                
+                this.getChannel().basicPublish(
+                        this.getGroupName() // exchange
+                        , this.getSendTo() // routingKey
+                        , properties // props
+                        , bMessage.build().toByteArray()); // message-body
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override

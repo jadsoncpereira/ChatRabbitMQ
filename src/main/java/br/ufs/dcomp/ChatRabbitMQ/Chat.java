@@ -28,6 +28,7 @@ public class Chat extends Thread {
     public Chat(String connHost, String connUser, String connPass) throws Exception {
         this.factory = new ConnectionFactory();
         this.factory.setHost(connHost);
+        //this.factory.setPort(80);
         this.factory.setUsername(connUser);
         this.factory.setPassword(connPass);
         this.factory.setVirtualHost("/");
@@ -66,11 +67,7 @@ public class Chat extends Thread {
             
             Sender sender = new Sender(this.getConnection(), this.getQueueName());
             sender.start();
-    
-//            Receiver receiver = new Receiver(this.getConnection(), this.getQueueName());
-//            receiver.start();
-//            Receiver fileReceiver = new FileReceiver(this.getConnection(), this.getQueueName());
-//            fileReceiver.start();
+            
             while(true) {
                 Thread.sleep(1000);
                 receiver = new Receiver(this.getConnection(), this.getQueueName());

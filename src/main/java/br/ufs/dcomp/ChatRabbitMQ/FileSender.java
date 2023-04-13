@@ -27,10 +27,10 @@ public class FileSender extends Sender{
         try {
             String type = Files.probeContentType(this.source);
             byte[] data = Files.readAllBytes(this.source);
-            String receiver = (this.getGroupName().length() > 0) ? ("#" + this.getGroupName()) : ("@" + this.getQueueName());
+            String receiver = (this.getGroupName().length() > 0) ? ("#" + this.getGroupName()) : ("@" + this.getSendTo());
 
             System.out.printf("\nEnviando %s para %s .\n", source.toAbsolutePath(), receiver);
-
+            
             this.send(data
                     , String.valueOf(source.getFileName())
                     ,new AMQP.BasicProperties.Builder()
@@ -38,7 +38,7 @@ public class FileSender extends Sender{
                             .deliveryMode(2)
                             .priority(1)
                             .build());
-
+            
             System.out.printf("\nArquivo %s foi enviado para %s !\n", source.toAbsolutePath(), receiver);
         } catch (Exception e) {
             throw new RuntimeException(e);
