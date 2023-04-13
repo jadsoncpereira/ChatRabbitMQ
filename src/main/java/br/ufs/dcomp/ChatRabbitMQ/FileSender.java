@@ -1,8 +1,12 @@
 package br.ufs.dcomp.ChatRabbitMQ;
 
+import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Connection;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -24,8 +28,17 @@ public class FileSender extends Sender{
             String type = Files.probeContentType(this.source);
             byte[] data = Files.readAllBytes(this.source);
             String receiver = (this.getGroupName().length() > 0) ? ("#" + this.getGroupName()) : ("@" + this.getQueueName());
+
             System.out.printf("\nEnviando %s para %s .\n", source.toAbsolutePath(), receiver);
-            this.send(data, String.valueOf(source.getFileName()), type);
+
+            this.send(data
+                    , String.valueOf(source.getFileName())
+                    ,new AMQP.BasicProperties.Builder()
+                            .contentType(type)
+                            .deliveryMode(2)
+                            .priority(1)
+                            .build());
+
             System.out.printf("\nArquivo %s foi enviado para %s !\n", source.toAbsolutePath(), receiver);
         } catch (Exception e) {
             throw new RuntimeException(e);

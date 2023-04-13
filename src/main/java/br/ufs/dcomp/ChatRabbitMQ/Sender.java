@@ -1,12 +1,9 @@
 package br.ufs.dcomp.ChatRabbitMQ;
 
 import com.google.protobuf.ByteString;
-import com.rabbitmq.client.BuiltinExchangeType;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.*;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -122,9 +119,9 @@ public class Sender extends Thread {
         }
     }
 
-    public void send(byte[] content, String filename, String type) throws Exception {
+    public void send(byte[] content, String filename, AMQP.BasicProperties properties) throws Exception {
         MensagemProto.Conteudo.Builder bContent = MensagemProto.Conteudo.newBuilder();
-        bContent.setTipo(type);
+        bContent.setTipo(properties.getContentType());
         bContent.setCorpo(ByteString.copyFrom(content));
         bContent.setNome(filename);
 
@@ -140,13 +137,17 @@ public class Sender extends Thread {
         bMessage.setGrupo(this.getGroupName());
         bMessage.setConteudo(bContent);
 
-        MensagemProto.Mensagem message = bMessage.build();
-        //  (exchange, routingKey, props, message-body             );
-        this.getChannel().basicPublish(this.getGroupName(), this.getSendTo(), null, message.toByteArray());
+        System.out.println(content.length);
+        this.getChannel().basicPublish(
+                this.getGroupName() // exchange
+                , this.getSendTo() // routingKey
+                , properties // props
+                , bMessage.build().toByteArray()); // message-body
     }
 
     @Override
     public void run(){
+        Receiver receiver, fileReceiver;
         try {
             this.setChannel(this.getConnection().createChannel());
         } catch (IOException e) {
@@ -189,7 +190,7 @@ public class Sender extends Thread {
                     break;
                 default:
                     try {
-                        this.send(text.getBytes(), "", "text/plain");
+                        this.send(text.getBytes(), "", MessageProperties.TEXT_PLAIN);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }

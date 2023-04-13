@@ -55,6 +55,7 @@ public class Chat extends Thread {
     }
 
     public void run() {
+        Receiver receiver, fileReceiver;
         Scanner scanner = new Scanner(System.in);
         System.out.print("User: ");
         try {
@@ -66,8 +67,15 @@ public class Chat extends Thread {
             Sender sender = new Sender(this.getConnection(), this.getQueueName());
             sender.start();
     
-            Receiver receiver = new Receiver(this.getConnection(), this.getQueueName());
-            receiver.start();
+//            Receiver receiver = new Receiver(this.getConnection(), this.getQueueName());
+//            receiver.start();
+//            Receiver fileReceiver = new FileReceiver(this.getConnection(), this.getQueueName());
+//            fileReceiver.start();
+            while(true) {
+                Thread.sleep(1000);
+                receiver = new Receiver(this.getConnection(), this.getQueueName());
+                receiver.start();
+            }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
