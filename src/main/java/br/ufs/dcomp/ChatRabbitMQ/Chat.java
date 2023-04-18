@@ -65,7 +65,13 @@ public class Chat extends Thread {
             //(queue-name, durable, exclusive, auto-delete, params);
             this.getChannel().queueDeclare(this.getQueueName(),false,false,false,null);
             
-            Sender sender = new Sender(this.getConnection(), this.getQueueName());
+            Sender sender = new Sender(
+                    this.getConnection()
+                    , this.factory.getHost()
+                    , this.factory.getUsername()
+                    , this.factory.getPassword()
+                    , this.getQueueName()
+            );
             sender.start();
             
             while(true) {

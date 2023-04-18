@@ -8,19 +8,41 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Base64;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.json.JSONArray;
 
 public class Sender extends Thread {
     private Connection connection;
+    private final String HOST;
+    private final String USERNAME;
+    private final String PASSWORD;
     private Channel channel;
     private String queueName;
     private String preText = ">> ";
     private String sendTo = "";
     private String groupName = "";
+    public Sender(Connection connection, String host, String username, String password, String queueName) {
+        this.connection = connection;
+        this.HOST = host;
+        this.USERNAME = username;
+        this.PASSWORD = password;
+        this.queueName = queueName;
+    }
+
     public Sender(Connection connection, String queueName) {
         this.connection = connection;
+        this.HOST = "";
+        this.USERNAME = "";
+        this.PASSWORD = "";
         this.queueName = queueName;
     }
 
@@ -72,12 +94,48 @@ public class Sender extends Thread {
         this.queueName = queueName;
     }
 
+    public void getRESTResponse(String path, String target) {
+        ExecutorService executorService = Executors.newFixedThreadPool(5);
+
+        executorService.execute(() -> {
+            try {
+                try {
+                    String usernameAndPassword = this.USERNAME + ":" + this.PASSWORD;
+                    String authorizationHeaderName = "Authorization";
+                    String authorizationHeaderValue = "Basic " + Base64.getEncoder().encodeToString( usernameAndPassword.getBytes() );
+
+                    // Perform a request
+                    String restResource = "http://" + this.HOST;
+                    Client client = ClientBuilder.newClient();
+                    Response response = client.target( restResource )
+                            .path(path)
+                            .request(MediaType.APPLICATION_JSON)
+                            .header( authorizationHeaderName, authorizationHeaderValue )
+                            .get();
+                    if (response.getStatus() == 200) {
+                        String json = response.readEntity(String.class);
+                        JSONArray jsonArray = new JSONArray(json);
+                        ArrayList<String> strArray = new ArrayList<>();
+                        for(int i = 0; i < jsonArray.length(); i++) {
+                            String value = jsonArray.getJSONObject(i).getString(target);
+                            if(value.length() > 0) strArray.add(value);
+                        }
+                        System.out.println(strArray.toString().replaceAll("[\\[\\]]", ""));
+                    } else System.out.println(response.getStatus());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
     public void commands(String text) throws Exception {
         String command = text.split(" ")[0].substring(1);
         String username;
         String groupName;
         String filepath;
-        String type;
 
         switch (command.trim()) {
             case "addGroup":
@@ -111,12 +169,17 @@ public class Sender extends Thread {
                     fileSender.setSendTo(this.getSendTo());
                     fileSender.setGroupName(this.getGroupName());
                     fileSender.start();
-//                    this.send(data, String.valueOf(source.getFileName()), type);
                 }
                 catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-
+                break;
+            case "listUsers":
+                groupName = text.split(" ")[1];
+                this.getRESTResponse("/api/exchanges/%2f/"+groupName+"/bindings/source","destination");
+                break;
+            case "listGroups":
+                this.getRESTResponse("/api/queues/%2f/"+this.getQueueName()+"/bindings","source");
                 break;
             default:
                 System.out.println("command invalid: " + command);
@@ -158,7 +221,6 @@ public class Sender extends Thread {
 
     @Override
     public void run(){
-        Receiver receiver, fileReceiver;
         try {
             this.setChannel(this.getConnection().createChannel());
         } catch (IOException e) {
